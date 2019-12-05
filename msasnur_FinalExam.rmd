@@ -1,0 +1,148 @@
+---
+title: "ML - Final Exam"
+author: "msasnur@kent.edu"
+date: "05/12/2019"
+output: html_document
+---
+```{r}
+library(caret)
+library(factoextra)
+library(hrbrthemes)
+library(GGally)
+library(viridis)
+set.seed(123)
+BathSoap<-read.csv("BathSoap.csv")
+#Finding brand loyality
+
+# Here, We choose the columns from 23 to 31 from Bathsoap dataset which relate to the brand loyality. Loyality can be measured by finding the maximum value among these rows, highest value obatained from a column indicates that the customer loyality towards a Brand represtning that column and hence customer is loyal to that brand.
+r1<-BathSoap[,23:31]
+BathSoap$Loyality<-as.numeric(apply(r1,1,which.max))
+
+# 1) i. The data includes customers purchase behaviour.
+
+# Purchase behaviour includes columns like 'Brand Runs','Total Volume','No.of Trans', Value, 'Avg.Price', Promotions(0%, 6%, and other promo),'Loyality'.
+data1<-BathSoap[,c(13:16, 19:22,47)]
+data1.s<-as.data.frame(scale(data1)) # scaling the data
+
+# Elbow chart is used to estimate the optimal K
+fviz_nbclust(data1.s,kmeans,method = "silhouette")
+
+# Choosing the optimal K as 3 and to form 3 clusters
+model<-kmeans(data1.s,3,nstart=50)
+
+# Visualizing the clusters
+fviz_cluster(model,data1.s)
+result<-as.data.frame(cbind(1:nrow(model$centers),model$centers))
+result$V1<-as.factor(result$V1)
+
+# Characteristics of the cluster
+result
+
+# ii) The data includes customer's basis of purchase.
+
+# Purchase basis includes the columns like 'Price categorrywise purchase' and 'selling propositionwise purchase'.
+data3<-BathSoap[,c(32:46)]
+data3.s<-as.data.frame(scale(data3))
+
+fviz_nbclust(data3.s,kmeans,method = "silhouette")
+# Choosing "3" as the optimal K, as we can see in the silhouette graph that after 3 there aren't any major variations. 
+model1<-kmeans(data3.s,3,nstart=50)
+
+#Visualizing 
+fviz_cluster(model1,data3.s)
+result1<-as.data.frame(cbind(1:nrow(model1$centers),model1$centers))
+result1$V1<-as.factor(result1$V1)
+
+#Characteristics of the cluster. 
+result1
+
+# iii)
+# Considering columns which includes purchase behaviour and purchase basis.
+data4<-BathSoap[,c(2,5,6,7,8,10,11,13,15,17:22,32:47)]
+data4.s<-as.data.frame(scale(data4))
+model2<-kmeans(data4.s,3,nstart=50)
+fviz_cluster(model2,data4.s)
+result2<-as.data.frame(cbind(1:nrow(model2$centers),model2$centers))
+result2$V1<-as.factor(result2$V1)
+
+#Characteristics of the clusters.
+result2
+
+#2: Visualizing the characteristics of the cluster
+
+# From the chracteristics of the cluster above, it is infered that (ii) and (iii) data forms the similar clusters. Hence visualising the characteristics of data with demographics and purchase basis since it has less varialbes compared to the (iii) case.
+data4$clusters<-model2$cluster
+
+#Formation of my clusters are,
+model2$size
+
+
+# Parallel plot to visualize the cluster.
+ggparcoord(result2,
+           columns = 2:9, groupColumn = 1, 
+           showPoints = TRUE, 
+           title = "Characterisitcs of the cluster",
+           alphaLines = 0.3 
+) 
+
+ggparcoord(result2,
+           columns = 10:ncol(result2), groupColumn = 1, 
+           showPoints = TRUE, 
+           title = "Characterisitcs of the cluster",
+           alphaLines = 0.3 
+) 
+
+```
+
+Description of clusters:
+In Cluster 1: 
+- Number of transactions are comparatively higher than other two clusters.
+- Customers Purchasing with 6% promo offers are more.
+- In this Cluster, purchase are mostly made in price cat (2 & 4) and proposition categories(5, 6, 7, 9, 11 and 15) 
+- More number of Customers who are loyal to brands are mostly in this cluster. 
+
+In cluster 2:
+- Average price of purchase is high in this cluster.
+- Customers usually in this cluster buy products under other promo offer.
+- In this Cluster, purchase are mostly made in price cat '1' and proposition categories(8, 10, 12 & 13)
+- We can observe brand loyal customers in this cluster but they are comparatively less than cluster 1.
+
+In Cluster 3:
+- Average number of products bought in single transaction are higher.
+- Average transaction done at different brands is high.
+- In this Cluster, purchase are mostly made in price cat '3' and proposition category '14'.
+- Customers in this cluster usually purchase products under no promo offer or under other promotional offers. But very less customers purcahsing under 6% promo offer.
+- In this cluster Brand Loyal customers are very less.
+
+```{r}
+
+#Q 3:
+data4$clusters<-model2$cluster
+# Here i'm dividing the data into parts belonging to particular cluster based on Purchase cat and loyality.
+Data5<- data4[,c(16:19,31,32)]
+head(Data5[Data5$clusters==1,])
+head(Data5[Data5$clusters==2,])
+head(Data5[Data5$clusters==3,])
+
+
+# Visualizing the output.
+# For the targeted marketing, the below plots would help to infer the data relation between the clusters formed,promotions,loyality and socio economic status.
+ggplot(data4) +
+  aes(x = clusters,fill= as.factor(SEC)) +
+  geom_bar() +
+  scale_fill_hue() +
+  theme_minimal() +
+  facet_wrap(vars(c("Pr Cat 1","Pr Cat 2","Pr Cat 3","Pr Cat 4")))
+# We can observe in the above graph that cluster 1 has mix of all stauts customers. Below graph will be able to help in marketing for each price categories. 
+
+ggplot(Data5) +
+  aes(x = clusters,fill=as.factor(Loyality)) +
+  geom_bar() +
+  scale_fill_hue() +
+  theme_minimal() +
+  facet_wrap(vars(c("Pr Cat 1","Pr Cat 2","Pr Cat 3","Pr Cat 4")))
+# We can observe in the above graph that  cluster3 is loyal to brand2 in all price categories and cluster 1 customers are more loyal to brand 9( which is 'other 999' column i.e, they are not loyal to any particular brand) in all price categories. Hence marketing team would focus on cluster1 customers to increase thier loyality by pitching promotional offers for all price category products. 
+
+
+```
+
